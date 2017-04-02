@@ -1,0 +1,8 @@
+sw/ps7_init*
+*.map
+*.elf
+*.o
+vivado*.jou
+vivado*.log
+*~
+hw/gen
