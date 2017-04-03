@@ -6,3 +6,4 @@ vivado*.jou
 vivado*.log
 *~
 hw/gen
+*.d
