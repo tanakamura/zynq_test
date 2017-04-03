@@ -18,8 +18,6 @@ init_mmu(void)
      * |31  20|19|18|17|16| 15|14  12|11 10| 9|8    5|4  3 2|1|0|
      */
 
-    printf("%p\n", elf_end);
-
     for (int i=0; i<4096; i++) {
         uint32_t val = pa;
 
@@ -48,8 +46,6 @@ init_mmu(void)
     uint32_t ttbr0_val = (uint32_t)lv1_pgtable;
     ttbr0_val |= 0x59;
 
-    puts("enable tlb");
-    
     /* enable mmu */
     __asm__ __volatile__(//"1: b 1b\n\t"
                          "mcr 15, 0, %[zero], c8, c7, 0\n\t" /* invalidate tlb */
@@ -70,7 +66,7 @@ init_mmu(void)
         );
 
     enable_page_as_io(UART1_BASE, 4096);
-    puts("enable tlb2");
+    puts("enable tlb");
 }
 
 void enable_page_as_io(uintptr_t pa,
