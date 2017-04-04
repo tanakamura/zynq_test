@@ -1,5 +1,5 @@
 #include <stdarg.h>
-#include "uart.h"
+#include "regs.h"
 #include "io.h"
 #include "libc.h"
 

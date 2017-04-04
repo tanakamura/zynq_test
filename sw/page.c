@@ -1,10 +1,11 @@
 #include <stdint.h>
-#include "uart.h"
 #include "page.h"
 #include "libc.h"
+#include "regs.h"
 #include "io.h"
+#include "cache.h"
 
-static unsigned int lv1_pgtable[4096] __attribute__((aligned(16384)));
+static uint32_t lv1_pgtable[4096] __attribute__((aligned(16384)));
 extern unsigned char _loaded[];
 struct page pages[NUM_PAGE];
 
@@ -45,6 +46,8 @@ init_mmu(void)
 
     uint32_t ttbr0_val = (uint32_t)lv1_pgtable;
     ttbr0_val |= 0x59;
+
+    cache_op_l1d_all(CACHE_INVALIDATE);
 
     /* enable mmu */
     __asm__ __volatile__(//"1: b 1b\n\t"
@@ -97,7 +100,7 @@ void enable_page_as_io(uintptr_t pa,
             val |= (1<<16);                   /* shareable */
             val |= (0<<12) | (0<<3) | (1<<2); /* shareable device */
 
-            uint32_t *entry_ptr = &lv1_pgtable[pi + pfn_start];
+            uint32_t *entry_ptr = &lv1_pgtable[(pi + pfn_start)];
             *entry_ptr = val;
             invalidate_tlb(pa);
         }

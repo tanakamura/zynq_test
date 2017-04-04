@@ -8,3 +8,5 @@
 #define UART_FIFO 0x30
 #define UART_BAUD_RATE_DIV 0x34
 
+#define SCU_BASE 
+
