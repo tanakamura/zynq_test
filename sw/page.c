@@ -44,10 +44,20 @@ init_mmu(void)
      *        5          9
      */
 
-    uint32_t ttbr0_val = (uint32_t)lv1_pgtable;
-    ttbr0_val |= 0x59;
+    slcr_unlock();
+    io_write32(0xf8000a1c, 0x020202);
+    slcr_lock();
+
+    /* from xilinx sdk */
+    io_write32(PL310_BASE + PL310_TAG_RAM_CONTROL, 0x111);
+    io_write32(PL310_BASE + PL310_DATA_RAM_CONTROL, 0x121);
+    io_write32(PL310_BASE + PL310_AUX_CONTROL, 0x72360000);
 
     cache_op_l1d_all(CACHE_INVALIDATE);
+    cache_op_l2d_all(CACHE_INVALIDATE);
+
+    uint32_t ttbr0_val = (uint32_t)lv1_pgtable;
+    ttbr0_val |= 0x59;
 
     /* enable mmu */
     __asm__ __volatile__(//"1: b 1b\n\t"
@@ -69,6 +79,10 @@ init_mmu(void)
         );
 
     enable_page_as_io(UART1_BASE, 4096);
+    enable_page_as_io(PL310_BASE, 4096);
+
+    io_write32(PL310_BASE + PL310_REG1_CONTROL, 1); /* enable l2 */
+
     puts("enable tlb");
 }
 

@@ -1,4 +1,6 @@
 #include "cache.h"
+#include "regs.h"
+#include "io.h"
 
 void
 cache_op_l1d_all(enum cache_op op)
@@ -11,7 +13,6 @@ cache_op_l1d_all(enum cache_op op)
     int num_set = (((reg>>13)&0x7fff)+1);
     int num_way = ((reg>>3)&0x3ff)+1;
     int line_size = (reg&0x7) * 32;
-    int total = num_set * num_way * line_size;
 
     for (int si=0; si<num_set; si++) {
         for (int wi=0; wi<num_way; wi++) {
@@ -30,4 +31,33 @@ cache_op_l1d_all(enum cache_op op)
             }
         }
     }
+}
+
+void
+cache_op_l2d_all(enum cache_op op)
+{
+    uintptr_t reg = 0;
+
+    switch (op) {
+    case CACHE_INVALIDATE:
+        reg = PL310_BASE + PL310_INV_WAY;
+        break;
+
+    case CACHE_WRITEBACK:
+        reg = PL310_BASE + PL310_CLEAN_WAY;
+        break;
+
+    case CACHE_WRITEBACK_INVALIDATE:
+        reg = PL310_BASE + PL310_CLEAN_INV_WAY;
+        break;
+    }
+
+    io_write32(reg, 0xffff);
+
+    while (1) {
+        if (io_read32(reg) == 0)
+            break;
+    }
+
+    io_write32(PL310_BASE + PL310_SYNC, 0);
 }

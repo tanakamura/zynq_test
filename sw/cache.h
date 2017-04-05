@@ -25,7 +25,7 @@ void cache_op_l2d_pa(enum cache_op op,
                      uintptr_t pa,
                      size_t length);
 
-void cache_op_pa(enum cache_op op,
-                 uintptr_t pa, size_t length);
+void cache_op_va(enum cache_op op,
+                 uintptr_t va, size_t length);
 
 #endif

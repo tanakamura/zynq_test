@@ -28,6 +28,7 @@ static inline void invalidate_tlb(uintptr_t va) {
 
 static inline void slcr_unlock() {
     io_write32(0xf800000c, 0xdf0d);
+    dmb();
 }
 static inline void slcr_lock() {
     io_write32(0xf800000c, 0x767b);
