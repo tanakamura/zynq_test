@@ -49,6 +49,7 @@ static inline void enable_page_as_c_ns(uintptr_t pa, size_t length)
 
 uintptr_t alloc_single_page(void);
 void free_page(uintptr_t pfn);
+void disable_page(uintptr_t pfn);
 
 void map_address(uintptr_t pfn,uintptr_t pa,int page_type, int shareable);
 

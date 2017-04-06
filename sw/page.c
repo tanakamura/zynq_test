@@ -191,22 +191,32 @@ alloc_single_page(void)
 
 void free_page(uintptr_t pfn) {
     pages[pfn].flags &= ~(PAGE_ALLOCATED);
+
+    uint32_t *entry_ptr = &lv1_pgtable[pfn];
+    *entry_ptr = 0;
+    invalidate_tlb(pfn * PAGE_SIZE);
+}
+
+void disable_page(uintptr_t pfn) {
+    uint32_t *entry_ptr = &lv1_pgtable[pfn];
+    *entry_ptr = 0;
+    invalidate_tlb(pfn * PAGE_SIZE);
 }
 
 void
 map_address(uintptr_t pfn,uintptr_t pa,int page_type, int shareable)
 {
-        struct page *p = &pages[pfn];
+    struct page *p = &pages[pfn];
 
-        p->type = page_type;
+    p->type = page_type;
 
-        uint32_t val = pa;
-        val |= 0x2;             /* section */
-        val |= (3<<10);         /* enable access */
-        val |= (shareable<<16); /* shareable */
-        val |= texremap_table[page_type];
+    uint32_t val = pa;
+    val |= 0x2;             /* section */
+    val |= (3<<10);         /* enable access */
+    val |= (shareable<<16); /* shareable */
+    val |= texremap_table[page_type];
 
-        uint32_t *entry_ptr = &lv1_pgtable[pfn];
-        *entry_ptr = val;
-        invalidate_tlb(pa);
+    uint32_t *entry_ptr = &lv1_pgtable[pfn];
+    *entry_ptr = val;
+    invalidate_tlb(pa);
 }

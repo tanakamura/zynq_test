@@ -7,3 +7,4 @@ vivado*.log
 *~
 hw/gen
 *.d
+vivado*.str

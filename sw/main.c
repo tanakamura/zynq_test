@@ -10,6 +10,59 @@
 extern unsigned char _ocm_start[], _ocm_end[];
 extern unsigned char _heap[];
 extern unsigned char _secondary_start[];
+extern unsigned char exc_vector[];
+extern unsigned char _exc_stack[];
+extern unsigned char _exc_stack2[];
+
+struct exception_regs {
+    uint32_t r[15];
+};
+
+void
+fatal(void) {
+    puts("fatal : unhandled exception");
+    while (1);
+}
+
+void
+data_abort(struct exception_regs *regs) {
+    uint32_t data_addr;
+    uint32_t inst_addr = regs->r[14]-8;
+
+    __asm__ __volatile__ ("mrc p15, 0, %0, c6, c0, 0" :"=r"(data_addr));
+    
+    printf("data abort : pc=%x, addr=%x\n", inst_addr, data_addr);
+    while (1);
+}
+
+void
+irq_handler(void) {
+    puts("irq");
+    while (1);
+}
+void
+fiq_handler(void) {
+    puts("fiq");
+    while (1);
+}
+
+static void
+set_exc_stack(uint32_t mode, void *addr)
+{
+    uint32_t mask = 0xffffffe0;
+    uint32_t cur_cpsr;
+    __asm__ __volatile__("mrs %0, cpsr\n\t" : "=r"(cur_cpsr));
+    uint32_t new_cpsr = (cur_cpsr & mask) | mode;
+
+    __asm__ __volatile__("msr cpsr, %[new_cpsr]\n\t"
+                         "mov r13, %[stack]\n\t"
+                         "msr cpsr, %[cur_cpsr]\n\t"
+                         :
+                         :[new_cpsr]"r"(new_cpsr),
+                          [cur_cpsr]"r"(cur_cpsr),
+                          [stack]"r"(addr)
+                         :"r13");
+}
 
 int
 main()
@@ -24,6 +77,14 @@ main()
     uint32_t ctrl = io_read32(UART1_BASE + UART_CONTROL);
     ctrl |= (1<<2) | (1<<4);    /* enable rx/tx */
     io_write32(UART1_BASE + UART_CONTROL, ctrl);
+
+    set_exc_stack(0x11, _exc_stack);        /* fiq */
+    set_exc_stack(0x12, _exc_stack);        /* irq */
+    set_exc_stack(0x13, _exc_stack);        /* svc */
+    set_exc_stack(0x17, _exc_stack);        /* abt */
+    set_exc_stack(0x1b, _exc_stack);        /* und */
+
+    __asm__ __volatile__ ("mcr p15, 0, %0, c12, c0, 0" : : "r"(exc_vector));
 
     /* uart_freq == 100MHz */
     /* clock = 100MHz/8 = 12.5MHz */
@@ -61,8 +122,8 @@ main()
            total);
 
     init_mmu(0);
-    puts("enable tlb");
-
+    puts("enable mmu");
+    disable_page(0);            /* disable access to null pointer */
 
     while (1) {
         putchar('>');
@@ -111,7 +172,18 @@ main()
 int
 main2()
 {
+    set_exc_stack(0x11, _exc_stack2);        /* fiq */
+    set_exc_stack(0x12, _exc_stack2);        /* irq */
+    set_exc_stack(0x13, _exc_stack2);        /* svc */
+    set_exc_stack(0x17, _exc_stack2);        /* abt */
+    set_exc_stack(0x1b, _exc_stack2);        /* und */
+
+    __asm__ __volatile__ ("mcr p15, 0, %0, c12, c0, 0" : : "r"(exc_vector));
+
     init_mmu(1);
     printf("Hello World! (from cpu=1)\n");
+
+    while (1);
+
     return 0;
 }
