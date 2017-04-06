@@ -11,11 +11,14 @@
 #define PAGE_ENABLED (1<<0)
 
 enum {
-    PAGE_TYPE_IO,
-    PAGE_TYPE_UC_MEM,
-    PAGE_TYPE_WC_MEM,
-    PAGE_TYPE_C_MEM,
+    PAGE_TYPE_UC,
+    PAGE_TYPE_WC,
+    PAGE_TYPE_C
 };
+
+#define PAGE_TYPE_WC_MEM PAGE_TYPE_WC_IO
+
+extern uint16_t texremap_table[];
 
 struct page {
     uint8_t flags;
