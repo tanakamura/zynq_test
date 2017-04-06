@@ -3,6 +3,14 @@
 #include "io.h"
 
 void
+cache_op_d_all(enum cache_op op)
+{
+    cache_op_l1d_all(op);
+    cache_op_l2_all(op);
+}
+
+
+void
 cache_op_l1d_all(enum cache_op op)
 {
     /* csselr = 0 */
@@ -12,7 +20,6 @@ cache_op_l1d_all(enum cache_op op)
 
     int num_set = (((reg>>13)&0x7fff)+1);
     int num_way = ((reg>>3)&0x3ff)+1;
-    int line_size = (reg&0x7) * 32;
 
     for (int si=0; si<num_set; si++) {
         for (int wi=0; wi<num_way; wi++) {
@@ -34,7 +41,7 @@ cache_op_l1d_all(enum cache_op op)
 }
 
 void
-cache_op_l2d_all(enum cache_op op)
+cache_op_l2_all(enum cache_op op)
 {
     uintptr_t reg = 0;
 
@@ -60,4 +67,35 @@ cache_op_l2d_all(enum cache_op op)
     }
 
     io_write32(PL310_BASE + PL310_SYNC, 0);
+}
+
+void
+cache_op_va(enum cache_op op,
+            uintptr_t va, size_t length)
+{
+    uintptr_t l2_reg = 0;
+    uintptr_t off = 0;
+
+    switch (op) {
+    case CACHE_INVALIDATE:
+        for (off=0; off<length; off+=32) {
+            asm volatile("mcr p15, 0, %0, c7, c6, 1": :"r"(va + off));
+            io_write32(PL310_BASE + PL310_INV_PA, (va + off));
+        }
+        break;
+
+    case CACHE_WRITEBACK:
+        for (off=0; off<length; off+=32) {
+            asm volatile("mcr p15, 0, %0, c7, c10, 1": :"r"(va + off));
+            io_write32(PL310_BASE + PL310_CLEAN_PA, (va + off));
+        }
+        break;
+
+    case CACHE_WRITEBACK_INVALIDATE:
+        for (off=0; off<length; off+=32) {
+            asm volatile("mcr p15, 0, %0, c7, c14, 1": :"r"(va + off));
+            io_write32(PL310_BASE + PL310_CLEAN_INV_PA, (va + off));
+        }
+        break;
+    }
 }

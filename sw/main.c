@@ -5,11 +5,14 @@
 #include "ps7_init.h"
 #include "libc.h"
 #include "page.h"
+#include "cache.h"
 
 extern unsigned char _ocm_start[], _ocm_end[];
 extern unsigned char _heap[];
+extern unsigned char _secondary_start[];
 
-int main()
+int
+main()
 {
     uint32_t mode = 0;
     mode |= 0x1;                /* div 8 */
@@ -34,9 +37,11 @@ int main()
 
     uintptr_t scu_base;
     __asm__ __volatile__ ("mrc p15, 4, %0, c15, c0, 0":"=r"(scu_base));
+    printf("%p\n", scu_base);
 
     uint32_t scu_ctrl = io_read32(scu_base + 0);
     io_write32(scu_base + 0, scu_ctrl | 1); /* enable scu */
+    io_write32(scu_base + 4, 0xffff);
     printf("num_core = %x\n", (io_read32(scu_base + 4)&3) + 1);
 
     /* csselr = 0 */
@@ -55,9 +60,58 @@ int main()
            line_size,
            total);
 
-    init_mmu();
+    init_mmu(0);
+    puts("enable tlb");
 
-    while (1)
-        ;
-    
+
+    while (1) {
+        putchar('>');
+        putchar(' ');
+
+        char buffer[1024];
+        int i;
+
+        for (i=0; i<1024; i++) {
+            buffer[i] = getchar();
+            if (buffer[i] == '\r') {
+                buffer[i] = '\0';
+                putchar('\n');
+                break;
+            }
+            putchar(buffer[i]);
+            if (buffer[i] == '\b') {
+                i-=2;
+                if (i < 0) {
+                    i = 0;
+                }
+            }
+        }
+
+        if (strcmp(buffer,"sboot") == 0) {
+            uintptr_t tmp_page = alloc_single_page();
+            map_address(tmp_page, -PAGE_SIZE, PAGE_TYPE_UC, 1);
+
+            volatile uint32_t *secondary_ptr;
+            secondary_ptr = (volatile uint32_t*)(PFN_TO_VA(tmp_page) + PAGE_SIZE - 16);
+            *secondary_ptr= (uint32_t)_secondary_start;
+            __asm__ __volatile__ ("dmb");
+            __asm__ __volatile__ ("sev");
+
+            free_page(tmp_page);
+        }
+
+        if (i != 0) {
+            puts(buffer);
+        }
+    }
+
+    return 0;
+}
+
+int
+main2()
+{
+    init_mmu(1);
+    printf("Hello World! (from cpu=1)\n");
+    return 0;
 }

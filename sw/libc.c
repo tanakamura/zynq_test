@@ -3,8 +3,8 @@
 #include "io.h"
 #include "libc.h"
 
-static void
-putc0(char c) {
+void
+putc0(int c) {
     while (1) {
         uint32_t st = io_read32(UART1_BASE + UART_CHNL_STS);
         if (st & (1<<4)) {      /* TFUL */
@@ -17,17 +17,30 @@ putc0(char c) {
 }
 
 void
-putc(char c) {
+putchar(int c) {
     if (c == '\n') {
         putc0('\r');
     }
     putc0(c);
 }
 
+int
+getchar(void)
+{
+    while (1) {
+        uint32_t st = io_read32(UART1_BASE + UART_CHNL_STS);
+        if ((st & 2) == 0) {
+            break;
+        }
+    }
+
+    return io_read32(UART1_BASE + UART_FIFO);
+}
+
 static void
 put_str(const char *p) {
     while (*p) {
-        putc(*p);
+        putchar(*p);
         p++;
     }
 }
@@ -37,7 +50,7 @@ void
 puts(const char *p) {
     put_str(p);
 
-    putc('\n');
+    putchar('\n');
 }
 
 void
@@ -50,7 +63,7 @@ printf(const char *p, ...)
 
     while (*p) {
         if (*p != '%') {
-            putc(*p);
+            putchar(*p);
             p++;
         } else {
             char digits[32];
@@ -65,12 +78,12 @@ printf(const char *p, ...)
             case 'd':
                 v = va_arg(ap, int);
                 if (v < 0) {
-                    putc('-');
+                    putchar('-');
                     v = -v;     /* oh : ~0 */
                 }
 
                 if (v==0) {
-                    putc('0');
+                    putchar('0');
                 } else {
                     while (v) {
                         digits[pos] = table[v%10];
@@ -79,7 +92,7 @@ printf(const char *p, ...)
                     }
 
                     for (int i=pos-1; i>=0; i--) {
-                        putc(digits[i]);
+                        putchar(digits[i]);
                     }
                 }
                 break;
@@ -89,7 +102,7 @@ printf(const char *p, ...)
                 uv = va_arg(ap, unsigned int);
 
                 if (uv==0) {
-                    putc('0');
+                    putchar('0');
                 } else {
                     while (uv) {
                         digits[pos] = table[uv&0xf];
@@ -98,7 +111,7 @@ printf(const char *p, ...)
                     }
 
                     for (int i=pos-1; i>=0; i--) {
-                        putc(digits[i]);
+                        putchar(digits[i]);
                     }
                 }
                 break;
@@ -130,5 +143,23 @@ void memcpy(void *dst, const void *src, size_t sz)
 
     for (; i<sz; i++) {
         pd[i] = ps[i];
+    }
+}
+
+int
+strcmp(const char *s1, const char *s2)
+{
+    while (*s1 == *s2) {
+        if (*s1 == '\0') {
+            return 0;
+        }
+        s1++;
+        s2++;
+    }
+
+    if (*s1 < *s2) {
+        return -1;
+    } else {
+        return 1;
     }
 }

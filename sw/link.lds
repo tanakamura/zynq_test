@@ -27,6 +27,10 @@ SECTIONS
    . = . + 1M;
    _stack = .;
 
+   . = ALIGN(32);
+   . = . + 1M;
+   _stack2 = .;
+
    . = ALIGN(1024*1024);
    _loaded = .;
 }

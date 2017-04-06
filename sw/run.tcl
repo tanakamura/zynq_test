@@ -12,3 +12,6 @@ ps7_init
 dow main.elf
 
 con
+
+target 3
+con

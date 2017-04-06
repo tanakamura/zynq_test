@@ -13,7 +13,7 @@ enum cache_op {
 void cache_op_l1d_all(enum cache_op op);
 void cache_op_l1i_all(enum cache_op op);
 void cache_op_l2d_all(enum cache_op op);
-void cache_op_all(enum cache_op op);
+void cache_op_d_all(enum cache_op op);
 
 void cache_op_l1i_va(enum cache_op op, 
                      uintptr_t va,
@@ -21,10 +21,11 @@ void cache_op_l1i_va(enum cache_op op,
 void cache_op_l1d_va(enum cache_op op, 
                      uintptr_t va,
                      size_t length);
-void cache_op_l2d_pa(enum cache_op op, 
-                     uintptr_t pa,
-                     size_t length);
+void cache_op_l2_pa(enum cache_op op, 
+                    uintptr_t pa,
+                    size_t length);
 
+/* va & length should align to cacheline(32byte) */
 void cache_op_va(enum cache_op op,
                  uintptr_t va, size_t length);
 
