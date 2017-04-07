@@ -6,6 +6,7 @@
 #include "libc.h"
 #include "page.h"
 #include "cache.h"
+#include "zybo.h"
 
 extern unsigned char _ocm_start[], _ocm_end[];
 extern unsigned char _heap[];
@@ -125,6 +126,17 @@ main()
     puts("enable mmu");
     disable_page(0);            /* disable access to null pointer */
 
+    enable_page_as_io(GPIO_BASE, 4096);
+    uint32_t led_bank = GPIO_BANK(GPIO_LED4);
+    uint32_t led_bit = GPIO_BIT(GPIO_LED4);
+
+    gpio_set_direction(GPIO_LED4, 1);
+    gpio_set_direction(GPIO_BTN4, 0);
+    gpio_set_direction(GPIO_BTN5, 0);
+
+    io_write32(GPIO_BASE + GPIO_OEN(led_bank), 1<<led_bit);
+    io_write32(GPIO_BASE + GPIO_DATA(led_bank), 1<<led_bit);
+
     while (1) {
         putchar('>');
         putchar(' ');
@@ -159,10 +171,9 @@ main()
             __asm__ __volatile__ ("sev");
 
             free_page(tmp_page);
-        }
-
-        if (i != 0) {
-            puts(buffer);
+        } else if (strcmp(buffer,"r_btn") == 0) {
+            printf("btn[4] = %d\n", gpio_read(GPIO_BTN4));
+            printf("btn[5] = %d\n", gpio_read(GPIO_BTN5));
         }
     }
 

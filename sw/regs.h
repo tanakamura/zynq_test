@@ -1,3 +1,6 @@
+#ifndef REGS_H
+#define REGS_H
+
 #define UART1_BASE 0xe0001000
 #define UART_CONTROL 0x0
 #define UART_MODE 0x4
@@ -28,3 +31,15 @@
 #define PL310_AUX_CONTROL 0x104
 #define PL310_TAG_RAM_CONTROL 0x108
 #define PL310_DATA_RAM_CONTROL 0x10c
+
+#define GPIO_BASE 0xe000a000
+
+#define GPIO_DATA(N) (0x00000040 + (N)*4)
+#define GPIO_DATA_READ(N) (0x00000060 + (N)*4)
+#define GPIO_DIRM(N) (0x00000204 + (N)*0x40)
+#define GPIO_OEN(N) (0x00000208 + (N)*0x40)
+
+#define GPIO_BANK(MIO) ((MIO)/32U)
+#define GPIO_BIT(MIO) ((MIO)%32U)
+
+#endif
