@@ -12,7 +12,7 @@ enum cache_op {
 
 void cache_op_l1d_all(enum cache_op op);
 void cache_op_l1i_all(enum cache_op op);
-void cache_op_l2d_all(enum cache_op op);
+void cache_op_l2_all(enum cache_op op);
 void cache_op_d_all(enum cache_op op);
 
 void cache_op_l1i_va(enum cache_op op, 

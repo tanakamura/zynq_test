@@ -99,7 +99,6 @@ main()
 
     uintptr_t scu_base;
     __asm__ __volatile__ ("mrc p15, 4, %0, c15, c0, 0":"=r"(scu_base));
-    printf("%p\n", scu_base);
 
     uint32_t scu_ctrl = io_read32(scu_base + 0);
     io_write32(scu_base + 0, scu_ctrl | 1); /* enable scu */
@@ -126,7 +125,7 @@ main()
     puts("enable mmu");
     disable_page(0);            /* disable access to null pointer */
 
-    enable_page_as_io(GPIO_BASE, 4096);
+    gpio_init();
     uint32_t led_bank = GPIO_BANK(GPIO_LED4);
     uint32_t led_bit = GPIO_BIT(GPIO_LED4);
 
@@ -136,6 +135,18 @@ main()
 
     io_write32(GPIO_BASE + GPIO_OEN(led_bank), 1<<led_bit);
     io_write32(GPIO_BASE + GPIO_DATA(led_bank), 1<<led_bit);
+
+    /* use GIC */
+    gic_init();
+    gic_config_irq(IRQ_GPIO, 1, 24, GIC_TRIGGER_TYPE_LEVEL);
+    gic_enable(IRQ_GPIO);
+
+    gpio_enable_int_any_edge(GPIO_BTN4);
+    gpio_enable_int_any_edge(GPIO_BTN5);
+
+    io_write32(ICCPMR, 0xff);
+
+    __asm__ __volatile__("cpsie i\n\t");
 
     while (1) {
         putchar('>');
@@ -174,6 +185,39 @@ main()
         } else if (strcmp(buffer,"r_btn") == 0) {
             printf("btn[4] = %d\n", gpio_read(GPIO_BTN4));
             printf("btn[5] = %d\n", gpio_read(GPIO_BTN5));
+        } else if (strcmp(buffer,"st") == 0) {
+            printf("iccpmr=%x\n", io_read32(ICCPMR));
+            printf("icciar=%x\n", io_read32(ICCIAR));
+            printf("iccicr=%x\n", io_read32(ICCICR));
+            printf("iccrpr =%x\n", io_read32(ICCRPR));
+            printf("icdabr=%x %x %x\n",
+                   io_read32(ICDABR(0)),
+                   io_read32(ICDABR(1)),
+                   io_read32(ICDABR(2)));
+
+            printf("icdicfr=%x\n",
+                   io_read32(ICDICFR(IRQ_GPIO/16)));
+
+            printf("icdiser=%x %x\n",
+                   io_read32(ICDISER(0)), 
+                   io_read32(ICDISER(1)));
+
+            printf("spi_status=%x %x\n",
+                   io_read32(spi_status(0)), 
+                   io_read32(spi_status(1)));
+
+            printf("gpio irq target=%x\n", io_read32(ICDIPTR(IRQ_GPIO/4)));
+            printf("irq prio=%x\n", io_read32(ICDIPR(IRQ_GPIO/4)));
+            
+            printf("gpio mask = %x %x %x\n",
+                   io_read32(GPIO_BASE + GPIO_INT_MASK(0)),
+                   io_read32(GPIO_BASE + GPIO_INT_MASK(1)),
+                   io_read32(GPIO_BASE + GPIO_INT_MASK(2)));
+
+            printf("gpio int st = %x %x %x\n",
+                   io_read32(GPIO_BASE + GPIO_INT_STAT(0)),
+                   io_read32(GPIO_BASE + GPIO_INT_STAT(1)),
+                   io_read32(GPIO_BASE + GPIO_INT_STAT(2)));
         }
     }
 

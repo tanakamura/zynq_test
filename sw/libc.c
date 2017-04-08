@@ -69,7 +69,6 @@ printf(const char *p, ...)
             char digits[32];
             int v;
             unsigned int uv;
-            int neg = 0;
             int pos = 0;
             char fmt = p[1];
             p+=2;

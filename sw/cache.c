@@ -73,7 +73,6 @@ void
 cache_op_va(enum cache_op op,
             uintptr_t va, size_t length)
 {
-    uintptr_t l2_reg = 0;
     uintptr_t off = 0;
 
     switch (op) {

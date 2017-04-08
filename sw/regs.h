@@ -39,7 +39,47 @@
 #define GPIO_DIRM(N) (0x00000204 + (N)*0x40)
 #define GPIO_OEN(N) (0x00000208 + (N)*0x40)
 
+#define GPIO_INT_MASK(N) (0x0000020c + (N*0x40))
+#define GPIO_INT_EN(N) (0x00000210 + (N*0x40))
+#define GPIO_INT_DIS(N) (0x00000214 + (N*0x40))
+#define GPIO_INT_STAT(N) (0x00000218 + (N*0x40))
+#define GPIO_INT_TYPE(N) (0x0000021c + (N*0x40))
+#define GPIO_INT_POLARITY(N) (0x00000220 + (N*0x40))
+#define GPIO_INT_ANY(N) (0x00000224 + (N*0x40))
+
 #define GPIO_BANK(MIO) ((MIO)/32U)
 #define GPIO_BIT(MIO) ((MIO)%32U)
+
+#define SCU_BASE 0xf8f00000
+
+#define ICCICR 0xf8f00100
+#define ICCPMR 0xf8f00104
+#define ICCIAR 0xf8f0010C
+#define ICCEOIR 0xf8f00110
+#define ICCRPR 0xf8f00114
+#define ICCHPIR 0xf8f00118
+
+#define ICDDCR 0xf8f01000
+#define ICDICTR 0xf8f01004
+#define ICDIIDR 0xf8f01008
+
+#define spi_status(n) (0xf8f01d04 + (n)*4)
+
+#define ICDISER(N) (0xf8f01100 + (N)*4)
+#define ICDIPR(N) (0xf8f01400 + (N)*4)
+#define ICDIPTR(N) (0xf8f01800 + (N)*4)
+#define ICDICFR(N) (0xf8f01C00 + (N)*4)
+#define ICDABR(N) (0xf8f01300 + (N)*4)
+
+#define IRQ_GPIO 52
+#define IRQ_USB0 53
+#define IRQ_ENET0 54
+#define IRQ_ENET0_WAKEUP 55
+#define IRQ_I2C0 57
+#define IRQ_SPI0 58
+#define IRQ_UART0 59
+#define IRQ_CAN0 60
+#define IRQ_PL(N) (61 + N)
+#define IRQ_TTC1 (69)
 
 #endif

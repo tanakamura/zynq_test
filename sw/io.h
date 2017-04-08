@@ -10,6 +10,19 @@ static inline uint32_t io_read32(uintptr_t p) {
 static inline void io_write32(uintptr_t p, uint32_t v) {
     *(volatile uint32_t*)p = v;
 }
+
+static inline void io_or32(uintptr_t p, uint32_t v) {
+    *(volatile uint32_t*)p |= v;
+}
+static inline void io_clear32(uintptr_t p, uint32_t v) {
+    *(volatile uint32_t*)p &= ~v;
+}
+static inline void io_mask_or32(uintptr_t p, uint32_t mask, uint32_t v) {
+    uint32_t old = *(volatile uint32_t*)p;
+    *(volatile uint32_t*)p = (old&mask)|v;
+}
+
+
 static inline void dsb(void) {
     __asm__ __volatile__ ("dsb");
 }
@@ -36,7 +49,7 @@ static inline void slcr_lock() {
     dmb();
 }
 
-static void
+static inline void
 gpio_set_direction(int mio, int output)
 {
     uint32_t bank = GPIO_BANK(mio);
@@ -54,7 +67,7 @@ gpio_set_direction(int mio, int output)
     }
 }
 
-static int gpio_read(int mio)
+static inline int gpio_read(int mio)
 {
     uint32_t bank = GPIO_BANK(mio);
     uint32_t bit = GPIO_BIT(mio);
@@ -63,6 +76,39 @@ static int gpio_read(int mio)
 
     return !!(v & (1<<bit));
 }
+
+static inline void gpio_enable_int_any_edge(int mio)
+{
+    uint32_t bank = GPIO_BANK(mio);
+    uint32_t bit = GPIO_BIT(mio);
+
+    io_write32(GPIO_BASE + GPIO_INT_EN(bank), 1<<bit);
+    io_or32(GPIO_BASE + GPIO_INT_ANY(bank), 1<<bit);
+    io_or32(GPIO_BASE + GPIO_INT_TYPE(bank), 1<<bit);
+}
+
+void gpio_init(void);
+
+static inline void
+gpio_int_clear(int mio)
+{
+    uint32_t bank = GPIO_BANK(mio);
+    uint32_t bit = GPIO_BIT(mio);
+
+    io_write32(GPIO_BASE + GPIO_INT_STAT(bank), (1<<bit));
+}
+    
+
+void gic_init(void);
+
+#define GIC_TRIGGER_TYPE_LEVEL 1
+#define GIC_TRIGGER_TYPE_EDGE 3
+
+void gic_config_irq(unsigned int gic_irq,
+                    int target_cpu_mask,
+                    int prio,
+                    int trigger_type);
+void gic_enable(unsigned int gic_irq);
 
 
 #endif
