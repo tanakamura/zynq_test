@@ -1,6 +1,9 @@
 #ifndef REGS_H
 #define REGS_H
 
+#include <stdint.h>
+#include "ps7_init.h"
+
 #define UART1_BASE 0xe0001000
 #define UART_CONTROL 0x0
 #define UART_MODE 0x4
@@ -81,5 +84,34 @@
 #define IRQ_CAN0 60
 #define IRQ_PL(N) (61 + N)
 #define IRQ_TTC1 (69)
+
+#define GTC_REG0 0xf8f00200
+#define GTC_REG1 0xf8f00204
+#define GTC_CONTROL 0xf8f00208
+
+#define GTC_FREQ (APU_FREQ/2)
+
+static inline uint32_t
+read_gtc_32(void)
+{
+    return *(volatile uint32_t*)GTC_REG0;
+}
+
+static inline uint64_t
+read_gtc_64(void)
+{
+    uint32_t lo, hi, hi2;
+
+retry:
+    hi = *(volatile uint32_t*)GTC_REG1;
+    lo = *(volatile uint32_t*)GTC_REG0;
+    hi2 = *(volatile uint32_t*)GTC_REG1;
+
+    if (hi != hi2) {
+        goto retry;
+    }
+
+    return ((uint64_t)hi<<32) | lo;
+}
 
 #endif

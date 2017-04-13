@@ -7,6 +7,7 @@
 #include "page.h"
 #include "cache.h"
 #include "zybo.h"
+#include "console.h"
 
 extern unsigned char _ocm_start[], _ocm_end[];
 extern unsigned char _heap[];
@@ -64,6 +65,118 @@ set_exc_stack(uint32_t mode, void *addr)
                           [stack]"r"(addr)
                          :"r13");
 }
+
+typedef void (*command_func_t)(int argc, char **argv);
+
+static void
+sboot(int argc, char **argv)
+{
+    uintptr_t tmp_page = alloc_single_page();
+    map_address(tmp_page, -PAGE_SIZE, PAGE_TYPE_UC, 1);
+
+    volatile uint32_t *secondary_ptr;
+    secondary_ptr = (volatile uint32_t*)(PFN_TO_VA(tmp_page) + PAGE_SIZE - 16);
+    *secondary_ptr= (uint32_t)_secondary_start;
+    __asm__ __volatile__ ("dmb");
+    __asm__ __volatile__ ("sev");
+
+    free_page(tmp_page);
+}
+
+
+static void
+read_btn(int argc, char **argv) {
+    printf("btn[4] = %d\n", gpio_read(GPIO_BTN4));
+    printf("btn[5] = %d\n", gpio_read(GPIO_BTN5));
+}
+
+static void
+dump_status(int argc, char **argv) {
+    printf("iccpmr=%x\n", io_read32(ICCPMR));
+    printf("icciar=%x\n", io_read32(ICCIAR));
+    printf("iccicr=%x\n", io_read32(ICCICR));
+    printf("iccrpr =%x\n", io_read32(ICCRPR));
+    printf("icdabr=%x %x %x\n",
+           io_read32(ICDABR(0)),
+           io_read32(ICDABR(1)),
+           io_read32(ICDABR(2)));
+
+    printf("icdicfr=%x\n",
+           io_read32(ICDICFR(IRQ_GPIO/16)));
+
+    printf("icdiser=%x %x\n",
+           io_read32(ICDISER(0)), 
+           io_read32(ICDISER(1)));
+
+    printf("spi_status=%x %x\n",
+           io_read32(spi_status(0)), 
+           io_read32(spi_status(1)));
+
+    printf("gpio irq target=%x\n", io_read32(ICDIPTR(IRQ_GPIO/4)));
+    printf("irq prio=%x\n", io_read32(ICDIPR(IRQ_GPIO/4)));
+            
+    printf("gpio mask = %x %x %x\n",
+           io_read32(GPIO_BASE + GPIO_INT_MASK(0)),
+           io_read32(GPIO_BASE + GPIO_INT_MASK(1)),
+           io_read32(GPIO_BASE + GPIO_INT_MASK(2)));
+
+    printf("gpio int st = %x %x %x\n",
+           io_read32(GPIO_BASE + GPIO_INT_STAT(0)),
+           io_read32(GPIO_BASE + GPIO_INT_STAT(1)),
+           io_read32(GPIO_BASE + GPIO_INT_STAT(2)));
+}
+
+static void
+read_mem_uncache(int argc, char **argv) {
+    if (argc < 2) {
+        puts("usage rmem <addr> <num_word>");
+        return;
+    }
+
+    char *endptr;
+    uintptr_t addr_base = strtol(argv[1], &endptr, 0);
+    uintptr_t num_word = 1;
+
+    if (argc >= 3) {
+        num_word = strtol(argv[2], &endptr, 0);
+    }
+
+    for (int wi=0; wi<num_word; wi++) {
+        uintptr_t addr = addr_base + wi * 4;
+        uintptr_t page_addr = addr & ~(PAGE_SIZE-1);
+        uintptr_t byte_offset = addr - page_addr;
+
+        uintptr_t tmp_page = alloc_single_page();
+
+        map_address(tmp_page, page_addr, PAGE_TYPE_UC, 1);
+
+        volatile uint32_t *p = (volatile uint32_t*)(PFN_TO_VA(tmp_page) + byte_offset);
+        uint32_t val = *p;
+
+        printf("mem[0x%x] = 0x%x\n", addr, val);
+
+        free_page(tmp_page);
+    }
+}
+
+static void
+read_gtc(int argc, char **argv)
+{
+    uint32_t v = read_gtc_32();
+    printf("%d\n", v);
+}
+
+struct command {
+    const char *cmdname;
+    command_func_t func;
+} commands[] = {
+    {"sboot", sboot},
+    {"r_btn", read_btn},
+    {"st", dump_status},
+    {"rmemu", read_mem_uncache},
+    {"rgtc", read_gtc}
+};
+
 
 int
 main()
@@ -147,77 +260,18 @@ main()
     io_write32(ICCPMR, 0xff);
 
     __asm__ __volatile__("cpsie i\n\t");
+    char *argv[8];
+    int argc;
 
     while (1) {
-        putchar('>');
-        putchar(' ');
+        read_console(&argc, argv, 8);
 
-        char buffer[1024];
-        int i;
-
-        for (i=0; i<1024; i++) {
-            buffer[i] = getchar();
-            if (buffer[i] == '\r') {
-                buffer[i] = '\0';
-                putchar('\n');
-                break;
-            }
-            putchar(buffer[i]);
-            if (buffer[i] == '\b') {
-                i-=2;
-                if (i < 0) {
-                    i = 0;
+        if (argc >= 1) {
+            for (int ci=0; ci<sizeof(commands)/sizeof(commands[0]); ci++) {
+                if (strcmp(argv[0],commands[ci].cmdname) == 0) {
+                    commands[ci].func(argc, argv);
                 }
             }
-        }
-
-        if (strcmp(buffer,"sboot") == 0) {
-            uintptr_t tmp_page = alloc_single_page();
-            map_address(tmp_page, -PAGE_SIZE, PAGE_TYPE_UC, 1);
-
-            volatile uint32_t *secondary_ptr;
-            secondary_ptr = (volatile uint32_t*)(PFN_TO_VA(tmp_page) + PAGE_SIZE - 16);
-            *secondary_ptr= (uint32_t)_secondary_start;
-            __asm__ __volatile__ ("dmb");
-            __asm__ __volatile__ ("sev");
-
-            free_page(tmp_page);
-        } else if (strcmp(buffer,"r_btn") == 0) {
-            printf("btn[4] = %d\n", gpio_read(GPIO_BTN4));
-            printf("btn[5] = %d\n", gpio_read(GPIO_BTN5));
-        } else if (strcmp(buffer,"st") == 0) {
-            printf("iccpmr=%x\n", io_read32(ICCPMR));
-            printf("icciar=%x\n", io_read32(ICCIAR));
-            printf("iccicr=%x\n", io_read32(ICCICR));
-            printf("iccrpr =%x\n", io_read32(ICCRPR));
-            printf("icdabr=%x %x %x\n",
-                   io_read32(ICDABR(0)),
-                   io_read32(ICDABR(1)),
-                   io_read32(ICDABR(2)));
-
-            printf("icdicfr=%x\n",
-                   io_read32(ICDICFR(IRQ_GPIO/16)));
-
-            printf("icdiser=%x %x\n",
-                   io_read32(ICDISER(0)), 
-                   io_read32(ICDISER(1)));
-
-            printf("spi_status=%x %x\n",
-                   io_read32(spi_status(0)), 
-                   io_read32(spi_status(1)));
-
-            printf("gpio irq target=%x\n", io_read32(ICDIPTR(IRQ_GPIO/4)));
-            printf("irq prio=%x\n", io_read32(ICDIPR(IRQ_GPIO/4)));
-            
-            printf("gpio mask = %x %x %x\n",
-                   io_read32(GPIO_BASE + GPIO_INT_MASK(0)),
-                   io_read32(GPIO_BASE + GPIO_INT_MASK(1)),
-                   io_read32(GPIO_BASE + GPIO_INT_MASK(2)));
-
-            printf("gpio int st = %x %x %x\n",
-                   io_read32(GPIO_BASE + GPIO_INT_STAT(0)),
-                   io_read32(GPIO_BASE + GPIO_INT_STAT(1)),
-                   io_read32(GPIO_BASE + GPIO_INT_STAT(2)));
         }
     }
 

@@ -10,5 +10,7 @@ void printf(const char *p, ...);
 void puts(const char *p);
 void memcpy(void *dst, const void *src, size_t sz);
 int strcmp(const char *s1, const char *s2);
+int isspace(int c);
+long strtol(const char *nptr, char **endptr, int base);
 
 #endif

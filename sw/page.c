@@ -133,8 +133,10 @@ init_mmu(int cpu)
     if (cpu == 0) {
         enable_page_as_io(UART1_BASE, 4096);
         enable_page_as_io(PL310_BASE, 4096);
+        enable_page_as_io(GTC_REG0, 4096);
 
-        //io_write32(PL310_BASE + PL310_REG1_CONTROL, 1); /* enable l2 */
+        io_write32(GTC_CONTROL, 1);
+        io_write32(PL310_BASE + PL310_REG1_CONTROL, 1); /* enable l2 */
     }
 }
 

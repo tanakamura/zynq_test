@@ -58,6 +58,7 @@ printf(const char *p, ...)
 {
     va_list ap;
     static const char table[]="0123456789abcdef";
+    char *s;
 
     va_start(ap, p);
 
@@ -114,6 +115,15 @@ printf(const char *p, ...)
                     }
                 }
                 break;
+
+            case 's':
+                s = va_arg(ap, char *);
+
+                while (*s) {
+                    putchar(*s);
+                    s++;
+                }
+                break;
             }
         }
     }
@@ -161,4 +171,66 @@ strcmp(const char *s1, const char *s2)
     } else {
         return 1;
     }
+}
+
+int
+isspace(int c) {
+    return (c=='\t') || (c==' ') || (c=='\r') || (c == '\n') || (c == '\f') || (c == '\v');
+}
+
+long strtol(const char *nptr, char **endptr, int base)
+{
+    long ret = 0;
+    int c;
+
+    c = nptr[0];
+    if (! (c >= '0' && c <= '9')) {
+        *endptr = (char*)&nptr[0];
+        return 0;
+    }
+
+    if (base == 0) {
+        c = nptr[1];
+        if (c == 'x' || c == 'X') {
+            base = 16;
+            nptr += 2;
+        } else {
+            base = 10;
+        }
+    }
+
+    if (base == 16) {
+        int i = 0;
+        ret = 0;
+        while (1) {
+            c = nptr[i];
+            if (c >= '0' && c <= '9') {
+                ret = ret*16 + (c-'0');
+            } else if (c >= 'a' && c <= 'f') {
+                ret = ret*16 + (c-'a')+10;
+            } else if (c >= 'A' && c <= 'F') {
+                ret = ret*16 + (c-'A')+10;
+            } else {
+                *endptr = (char*)&nptr[i];
+                return ret;
+            }
+
+            i++;
+        }
+    } else {
+        int i = 0;
+        ret = 0;
+        while (1) {
+            c = nptr[i];
+            if (c >= '0' && c <= '9') {
+                ret = ret*10 + (c-'0');
+            } else {
+                *endptr = (char*)&nptr[i];
+                return ret;
+            }
+
+            i++;
+        }
+    }
+
 }
